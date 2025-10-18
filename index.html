@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TSC Management System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #6b7280 0%, #1e3a8a 100%);
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+        .dropdown {
+            position: absolute;
+            z-index: 20;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            width: 100%;
+            max-height: 200px;
+            overflow-y: auto;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            margin-top: 4px;
+        }
+        .dropdown-item {
+            padding: 12px;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+        .dropdown-item:hover {
+            background-color: #f1f5f9;
+        }
+        .password-container {
+            position: relative;
+        }
+        .password-toggle {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            transition: color 0.2s ease;
+        }
+        .password-toggle:hover {
+            color: #3b82f6;
+        }
+        .input-field {
+            transition: all 0.3s ease;
+        }
+        .input-field:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        }
+        .btn {
+            transition: transform 0.2s ease, background-color 0.2s ease;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+        .card {
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+            transition: transform 0.3s ease;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+    <div id="login-page" class="bg-white p-8 rounded-2xl card w-full max-w-md">
+        <h1 class="text-3xl font-bold mb-8 text-center text-gray-800">TSC Management System</h1>
+        <div class="mb-6 relative">
+            <label for="username" class="block text-sm font-medium text-gray-700 mb-2">ชื่อผู้ใช้</label>
+            <input type="text" id="username" class="input-field w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" autocomplete="off">
+            <div id="username-dropdown" class="dropdown hidden"></div>
+        </div>
+        <div class="mb-6 password-container">
+            <label for="password" class="block text-sm font-medium text-gray-700 mb-2">รหัสผ่าน</label>
+            <input type="password" id="password" class="input-field w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <svg id="password-toggle" class="password-toggle h-5 w-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path id="eye-icon" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0zm0 0c0 1.5-2.4 3.6-6 3.6S3 13.5 3 12s2.4-3.6 6-3.6S15 10.5 15 12zm6 0c0 2.7-4.5 6-9 6s-9-3.3-9-6 4.5-6 9-6 9 3.3 9 6z"/>
+            </svg>
+        </div>
+        <div class="mb-6">
+            <label class="inline-flex items-center">
+                <input type="checkbox" id="remember-me" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                <span class="ml-2 text-sm text-gray-600">จำรหัสผ่าน</span>
+            </label>
+        </div>
+        <button onclick="login()" class="btn w-full bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700">เข้าสู่ระบบ</button>
+        <p id="error-message" class="text-red-500 text-sm mt-3 text-center hidden">ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง</p>
+    </div>
+
+    <div id="main-page" class="hidden bg-white p-8 rounded-2xl card w-full max-w-2xl">
+        <h1 class="text-3xl font-bold mb-6 text-center text-gray-800">Dashboard TSC Management</h1>
+        <p class="text-sm text-gray-600 mb-6 text-center">เข้าสู่ระบบโดย: <span id="logged-in-user" class="font-semibold">Admin</span></p>
+        <div class="grid grid-cols-1 gap-4">
+            <button onclick="openTSCReport()" class="btn bg-blue-600 text-white p-4 rounded-lg hover:bg-blue-700">รายการการเก็บเครื่อง TSC ร้าน Renovate ปิดถาวร ย้ายสาขา</button>
+            <button onclick="openTSCDummyReport()" class="btn bg-blue-600 text-white p-4 rounded-lg hover:bg-blue-700">รายการการคืนอะไหล่ TSC Dummy</button>
+        </div>
+        <button onclick="logout()" class="btn mt-6 w-full bg-red-600 text-white p-3 rounded-lg hover:bg-red-700">ออกจากระบบ</button>
+    </div>
+
+    <script>
+        // Check login state and pre-fill form on page load
+        window.onload = function() {
+            const isLoggedIn = localStorage.getItem('isLoggedIn');
+            const storedUsername = localStorage.getItem('username');
+            const storedPassword = localStorage.getItem('password');
+            const rememberMe = localStorage.getItem('rememberMe') === 'true';
+
+            // Pre-fill username and password fields if rememberMe is true
+            if (rememberMe && storedUsername) {
+                document.getElementById('username').value = storedUsername;
+            }
+            if (rememberMe && storedPassword) {
+                document.getElementById('password').value = storedPassword;
+            }
+            if (rememberMe) {
+                document.getElementById('remember-me').checked = true;
+            }
+
+            // Show dashboard if already logged in
+            if (isLoggedIn === 'true' && storedUsername === 'Admin' && storedPassword === 'Admin') {
+                document.getElementById('login-page').classList.add('hidden');
+                document.getElementById('main-page').classList.remove('hidden');
+                document.getElementById('logged-in-user').textContent = storedUsername;
+            }
+
+            // Load username history for dropdown
+            loadUsernameHistory();
+        };
+
+        // Toggle password visibility
+        document.getElementById('password-toggle').addEventListener('click', function() {
+            const passwordInput = document.getElementById('password');
+            const eyeIcon = document.getElementById('eye-icon');
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                eyeIcon.setAttribute('d', 'M15 12a3 3 0 11-6 0 3 3 0 016 0zm0 0c0 1.5-2.4 3.6-6 3.6S3 13.5 3 12s2.4-3.6 6-3.6S15 10.5 15 12zm6 0c0 2.7-4.5 6-9 6s-9-3.3-9-6 4.5-6 9-6 9 3.3 9 6zm-2 0a7 7 0 01-14 0m14 0l4 4m0-8l-4 4');
+            } else {
+                passwordInput.type = 'password';
+                eyeIcon.setAttribute('d', 'M15 12a3 3 0 11-6 0 3 3 0 016 0zm0 0c0 1.5-2.4 3.6-6 3.6S3 13.5 3 12s2.4-3.6 6-3.6S15 10.5 15 12zm6 0c0 2.7-4.5 6-9 6s-9-3.3-9-6 4.5-6 9-6 9 3.3 9 6z');
+            }
+        });
+
+        function loadUsernameHistory() {
+            const usernameInput = document.getElementById('username');
+            const dropdown = document.getElementById('username-dropdown');
+            let usernameHistory = JSON.parse(localStorage.getItem('usernameHistory') || '[]');
+
+            // Show dropdown on focus
+            usernameInput.addEventListener('focus', function() {
+                if (usernameHistory.length > 0) {
+                    dropdown.innerHTML = '';
+                    usernameHistory.forEach(username => {
+                        const item = document.createElement('div');
+                        item.className = 'dropdown-item';
+                        item.textContent = username;
+                        item.addEventListener('click', function() {
+                            usernameInput.value = username;
+                            dropdown.classList.add('hidden');
+                        });
+                        dropdown.appendChild(item);
+                    });
+                    dropdown.classList.remove('hidden');
+                }
+            });
+
+            // Hide dropdown when clicking outside
+            document.addEventListener('click', function(event) {
+                if (!usernameInput.contains(event.target) && !dropdown.contains(event.target)) {
+                    dropdown.classList.add('hidden');
+                }
+            });
+        }
+
+        function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const rememberMe = document.getElementById('remember-me').checked;
+            const errorMessage = document.getElementById('error-message');
+            const loginPage = document.getElementById('login-page');
+            const mainPage = document.getElementById('main-page');
+
+            if (username === 'Admin' && password === 'Admin') {
+                localStorage.setItem('isLoggedIn', 'true');
+                localStorage.setItem('rememberMe', rememberMe);
+                if (rememberMe) {
+                    localStorage.setItem('username', username);
+                    localStorage.setItem('password', password);
+                } else {
+                    localStorage.removeItem('username');
+                    localStorage.removeItem('password');
+                }
+
+                // Save username to history
+                let usernameHistory = JSON.parse(localStorage.getItem('usernameHistory') || '[]');
+                if (!usernameHistory.includes(username)) {
+                    usernameHistory.push(username);
+                    localStorage.setItem('usernameHistory', JSON.stringify(usernameHistory));
+                }
+
+                loginPage.classList.add('hidden');
+                mainPage.classList.remove('hidden');
+                document.getElementById('logged-in-user').textContent = username;
+                errorMessage.classList.add('hidden');
+            } else {
+                errorMessage.classList.remove('hidden');
+            }
+        }
+
+        function logout() {
+            const rememberMe = localStorage.getItem('rememberMe') === 'true';
+            if (!rememberMe) {
+                localStorage.removeItem('username');
+                localStorage.removeItem('password');
+            }
+            localStorage.removeItem('isLoggedIn');
+            localStorage.removeItem('rememberMe');
+            document.getElementById('main-page').classList.add('hidden');
+            document.getElementById('login-page').classList.remove('hidden');
+            if (!rememberMe) {
+                document.getElementById('username').value = '';
+                document.getElementById('password').value = '';
+                document.getElementById('remember-me').checked = false;
+            }
+        }
+
+        function openTSCReport() {
+            window.location.href = 'https://nawahovvp.github.io/TSCReport/';
+        }
+
+        function openTSCDummyReport() {
+            window.location.href = 'https://nawahovvp.github.io/TSCDummyReport/';
+        }
+    </script>
+</body>
+</html>
